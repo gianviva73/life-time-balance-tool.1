@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="it" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Creator Lab — Life & Time Balance Tool</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        neon: { purple: '#a855f7', violet: '#8b5cf6', gold: '#fbbf24', pink: '#ec4899' }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f0f17 0%, #1a1025 50%, #0f0f17 100%);
+            min-height: 100vh;
+        }
+        
+        .slider {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            border-radius: 9999px;
+            background: #374151;
+            outline: none;
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #a855f7, #ec4899);
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(168, 85, 247, 0.6);
+            border: 2px solid #fff;
+        }
+        .slider::-moz-range-thumb {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #a855f7, #ec4899);
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(168, 85, 247, 0.6);
+            border: 2px solid #fff;
+        }
+        
+        .card-area {
+            background: rgba(30, 20, 45, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            transition: all 0.3s ease;
+        }
+        .card-area:hover {
+            border-color: rgba(168, 85, 247, 0.45);
+            transform: translateY(-2px);
+        }
+        
+        .score-low { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .score-mid { background: linear-gradient(135deg, #eab308, #ca8a04); }
+        .score-high { background: linear-gradient(135deg, #22c55e, #16a34a); }
+        
+        #actionPlanCard {
+            background: linear-gradient(145deg, #1e1b2e, #2a1f3d);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #a855f7, #7c3aed);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px -5px rgba(168, 85, 247, 0.45);
+        }
+        
+        .btn-gold {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #1a1025;
+        }
+        
+        .guide-step {
+            background: rgba(168, 85, 247, 0.08);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #a855f7;
+            box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.25);
+        }
+        
+        .social-btn {
+            min-width: 140px;
+            justify-content: center;
+        }
+        
+        /* Language selector */
+        .lang-selector {
+            position: relative;
+        }
+        .lang-menu {
+            display: none;
+            position: absolute;
+            top: 110%;
+            right: 0;
+            background: #1e1b2e;
+            border: 1px solid rgba(168, 85, 247, 0.4);
+            border-radius: 12px;
+            overflow: hidden;
+            z-index: 50;
+            min-width: 130px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        }
+        .lang-menu.show {
+            display: block;
+        }
+        .lang-option {
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 14px;
+        }
+        .lang-option:hover {
+            background: rgba(168, 85, 247, 0.2);
+        }
+        .lang-option.active {
+            background: rgba(168, 85, 247, 0.3);
+            color: #e9d5ff;
+        }
+    </style>
+</head>
+<body class="text-gray-100 antialiased">
+
+    <!-- Toast -->
+    <div id="toast" class="fixed top-6 left-1/2 -translate-x-1/2 bg-purple-600 text-white px-6 py-3 rounded-xl shadow-lg z-50 opacity-0 pointer-events-none text-sm font-medium transition-all duration-300">
+        Bilancio salvato nello storico!
+    </div>
+
+    <div class="max-w-5xl mx-auto px-4 py-8 sm:py-12 relative">
+        
+        <!-- LANGUAGE SELECTOR (top right) -->
+        <div class="absolute top-4 right-4 sm:top-6 sm:right-6 lang-selector z-50">
+            <button onclick="toggleLangMenu()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-900/50 border border-purple-500/40 text-sm hover:bg-purple-800/60 transition">
+                <i class="fas fa-globe"></i>
+                <span id="currentLangLabel">IT</span>
+                <i class="fas fa-chevron-down text-xs"></i>
+            </button>
+            <div id="langMenu" class="lang-menu">
+                <div class="lang-option" onclick="changeLanguage('it')">🇮🇹 Italiano</div>
+                <div class="lang-option" onclick="changeLanguage('en')">🇬🇧 English</div>
+            </div>
+        </div>
+
+        <!-- HEADER -->
+        <header class="text-center mb-10 pt-8 sm:pt-4">
+            <div class="inline-flex items-center gap-2 mb-4 px-4 py-1.5 rounded-full bg-purple-900/40 border border-purple-500/30 text-sm text-purple-300">
+                <i class="fas fa-sparkles text-neon-gold"></i> Digital Creator Lab
+            </div>
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-3 bg-gradient-to-r from-purple-300 via-pink-300 to-amber-200 bg-clip-text text-transparent">
+                Life & Time Balance Tool
+            </h1>
+            <p id="headerDesc" class="text-gray-400 max-w-2xl mx-auto text-sm sm:text-base mb-6">
+                Valuta le 6 aree della tua vita, aggiungi note personali, genera un piano d’azione e monitora i tuoi progressi nel tempo.
+            </p>
+            <div class="flex flex-wrap justify-center gap-4">
+                <button onclick="shareWhatsApp()" class="social-btn inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 transition font-medium text-sm">
+                    <i class="fab fa-whatsapp text-lg"></i>
+                    <span id="btnShare">Condividi</span>
+                </button>
+                <button onclick="resetAll()" class="social-btn inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600 transition font-medium text-sm">
+                    <i class="fas fa-rotate-left"></i>
+                    <span id="btnReset">Reset</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- GUIDA -->
+        <section class="mb-12">
+            <div class="card-area rounded-2xl p-6">
+                <h2 class="text-xl font-bold mb-5 flex items-center gap-2">
+                    <i class="fas fa-book-open text-neon-gold"></i> <span id="guideTitle">Guida Rapida all’Uso</span>
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="guideSteps">
+                    <!-- filled by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- AREE + NOTE -->
+        <section class="mb-12">
+            <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
+                <i class="fas fa-sliders text-neon-purple"></i> <span id="areasTitle">Valutazione delle 6 Aree</span>
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5" id="areasContainer"></div>
+        </section>
+
+        <!-- RUOTA -->
+        <section class="mb-12">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                <h2 class="text-xl font-semibold flex items-center gap-2">
+                    <i class="fas fa-chart-radar text-neon-purple"></i> <span id="chartTitle">La Tua Ruota del Bilancio</span>
+                </h2>
+                <button onclick="downloadChart()" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-700 hover:bg-purple-600 transition text-sm font-medium">
+                    <i class="fas fa-download"></i> <span id="btnDownloadChart">Scarica Ruota</span>
+                </button>
+            </div>
+            <div class="card-area rounded-2xl p-4 sm:p-6" id="chartContainer">
+                <div class="relative w-full max-w-md mx-auto" style="height: 340px;">
+                    <canvas id="balanceChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- PIANO D'AZIONE -->
+        <section class="mb-12">
+            <div class="text-center mb-6">
+                <button onclick="generateActionPlan()" class="btn-primary px-8 py-4 rounded-2xl font-semibold text-lg inline-flex items-center gap-3 shadow-lg">
+                    <i class="fas fa-wand-magic-sparkles"></i> <span id="btnGenerate">Genera il mio Piano d’Azione (3 Passi)</span>
+                </button>
+            </div>
+            
+            <div id="actionPlanContainer" class="hidden">
+                <div id="actionPlanCard" class="rounded-2xl p-6 sm:p-8">
+                    <div class="flex items-center gap-3 mb-5">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                            <i class="fas fa-list-check text-white text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold" id="planTitle">Piano d’Azione Personalizzato</h3>
+                            <p class="text-sm text-gray-400" id="planSubtitle">Segna le azioni quando le completi</p>
+                        </div>
+                    </div>
+                    <div id="criticalAreas" class="mb-5 flex flex-wrap gap-2"></div>
+                    <div id="actionSteps" class="space-y-3 mb-6"></div>
+                    <blockquote id="motivationalQuote" class="border-l-4 border-neon-gold pl-4 italic text-amber-100/90 mb-6"></blockquote>
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="copyPlan()" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-600 transition text-sm font-medium">
+                            <i class="fas fa-copy"></i> <span id="btnCopy">Copia Piano</span>
+                        </button>
+                        <button onclick="exportPlanImage()" class="flex items-center gap-2 px-5 py-2.5 rounded-xl btn-gold text-sm font-medium">
+                            <i class="fas fa-image"></i> <span id="btnSaveImage">Salva come Immagine</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- STORICO -->
+        <section class="mb-12">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-semibold flex items-center gap-2">
+                    <i class="fas fa-clock-rotate-left text-neon-purple"></i> <span id="historyTitle">Il Tuo Storico</span>
+                </h2>
+                <button onclick="clearHistory()" class="text-xs text-red-400 hover:text-red-300 transition" id="btnClearHistory">Cancella storico</button>
+            </div>
+            <div id="historyContainer" class="space-y-3"></div>
+        </section>
+
+        <!-- FOOTER -->
+        <footer class="text-center pt-8 border-t border-purple-900/40">
+            <p class="text-gray-500 text-sm mb-5">
+                Powered by <span class="text-purple-400 font-medium">Digital Creator Lab</span>
+            </p>
+            
+            <div class="flex flex-wrap justify-center gap-4 mb-6">
+                <a href="https://www.youtube.com/@digitalcreatorlabIT" target="_blank"
+                   class="social-btn inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 transition text-sm font-medium">
+                    <i class="fab fa-youtube"></i>
+                    <span>YouTube</span>
+                </a>
+                <a href="https://whatsapp.com/channel/0029Vb8tqXaB4hdRxxjPkp3C" target="_blank"
+                   class="social-btn inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-green-600/20 hover:bg-green-600/40 border border-green-500/30 transition text-sm font-medium">
+                    <i class="fab fa-whatsapp"></i>
+                    <span>WhatsApp</span>
+                </a>
+                <a href="https://www.tiktok.com/@digital_creatorlab" target="_blank"
+                   class="social-btn inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-black/40 hover:bg-black/60 border border-gray-500/40 transition text-sm font-medium">
+                    <i class="fab fa-tiktok"></i>
+                    <span>TikTok</span>
+                </a>
+            </div>
+            
+            <p class="text-xs text-gray-600" id="footerText">
+                Strumento gratuito per la community • Usa e condividi liberamente
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // ========== TRANSLATIONS ==========
+        const translations = {
+            it: {
+                headerDesc: "Valuta le 6 aree della tua vita, aggiungi note personali, genera un piano d’azione e monitora i tuoi progressi nel tempo.",
+                btnShare: "Condividi",
+                btnReset: "Reset",
+                guideTitle: "Guida Rapida all’Uso",
+                guideSteps: [
+                    { title: "1. Valuta + Note", desc: "Muovi gli slider e scrivi una nota per ogni area." },
+                    { title: "2. Osserva la Ruota", desc: "Si aggiorna in tempo reale. Puoi scaricarla." },
+                    { title: "3. Genera il Piano", desc: "Ricevi 3 azioni concrete e segnale come fatte." },
+                    { title: "4. Storico Automatico", desc: "Ogni piano viene salvato con data e media." },
+                    { title: "5. Monitora i Progressi", desc: "Consulta lo storico per vedere i miglioramenti." },
+                    { title: "Consiglio", desc: "Usalo una volta a settimana. La costanza vince." }
+                ],
+                areasTitle: "Valutazione delle 6 Aree",
+                chartTitle: "La Tua Ruota del Bilancio",
+                btnDownloadChart: "Scarica Ruota",
+                btnGenerate: "Genera il mio Piano d’Azione (3 Passi)",
+                planTitle: "Piano d’Azione Personalizzato",
+                planSubtitle: "Segna le azioni quando le completi",
+                btnCopy: "Copia Piano",
+                btnSaveImage: "Salva come Immagine",
+                historyTitle: "Il Tuo Storico",
+                btnClearHistory: "Cancella storico",
+                noHistory: "Nessun bilancio salvato ancora. Genera il tuo primo piano d’azione!",
+                footerText: "Strumento gratuito per la community • Usa e condividi liberamente",
+                notePlaceholder: "Scrivi una nota personale...",
+                average: "Media",
+                confirmReset: "Vuoi resettare punteggi e note?",
+                confirmClear: "Vuoi cancellare tutto lo storico?",
+                areas: [
+                    { id: 'salute', name: 'Salute & Energia', desc: 'Corpo, idratazione, allenamento, vitalità' },
+                    { id: 'creativita', name: 'Creatività & Progetti', desc: 'Idee, espressione, nuovi format, output creativo' },
+                    { id: 'focus', name: 'Focus & Lavoro Profondo', desc: 'Concentrazione senza distrazioni, Root Hours' },
+                    { id: 'riposo', name: 'Riposo & Ricarica', desc: 'Qualità del sonno, pause, disconnessione digitale' },
+                    { id: 'finanze', name: 'Finanze & Risorse', desc: 'Sostenibilità, entrate, gestione budget creator' },
+                    { id: 'relazioni', name: 'Relazioni & Connessioni', desc: 'Famiglia, amicizie, community, vita sociale' }
+                ]
+            },
+            en: {
+                headerDesc: "Rate the 6 key areas of your life, add personal notes, generate an action plan and track your progress over time.",
+                btnShare: "Share",
+                btnReset: "Reset",
+                guideTitle: "Quick Start Guide",
+                guideSteps: [
+                    { title: "1. Rate + Notes", desc: "Move the sliders and write a note for each area." },
+                    { title: "2. Watch the Wheel", desc: "It updates in real time. You can download it." },
+                    { title: "3. Generate Plan", desc: "Get 3 concrete actions and mark them as done." },
+                    { title: "4. Auto History", desc: "Every plan is saved with date and average score." },
+                    { title: "5. Track Progress", desc: "Check your history to see improvements." },
+                    { title: "Tip", desc: "Use it once a week. Consistency beats intensity." }
+                ],
+                areasTitle: "Rate the 6 Areas",
+                chartTitle: "Your Balance Wheel",
+                btnDownloadChart: "Download Wheel",
+                btnGenerate: "Generate my Action Plan (3 Steps)",
+                planTitle: "Personalized Action Plan",
+                planSubtitle: "Check the actions when you complete them",
+                btnCopy: "Copy Plan",
+                btnSaveImage: "Save as Image",
+                historyTitle: "Your History",
+                btnClearHistory: "Clear history",
+                noHistory: "No balance saved yet. Generate your first action plan!",
+                footerText: "Free tool for the community • Use and share freely",
+                notePlaceholder: "Write a personal note...",
+                average: "Average",
+                confirmReset: "Do you want to reset scores and notes?",
+                confirmClear: "Do you want to clear the entire history?",
+                areas: [
+                    { id: 'salute', name: 'Health & Energy', desc: 'Body, hydration, training, vitality' },
+                    { id: 'creativita', name: 'Creativity & Projects', desc: 'Ideas, expression, new formats, creative output' },
+                    { id: 'focus', name: 'Focus & Deep Work', desc: 'Concentration without distractions, Root Hours' },
+                    { id: 'riposo', name: 'Rest & Recovery', desc: 'Sleep quality, breaks, digital disconnection' },
+                    { id: 'finanze', name: 'Finances & Resources', desc: 'Sustainability, income, creator budget management' },
+                    { id: 'relazioni', name: 'Relationships & Connections', desc: 'Family, friendships, community, social life' }
+                ]
+            }
+        };
+
+        const actionLibrary = {
+            salute: ["Bevi 2 bicchieri d’acqua appena ti alzi e cammina 10 minuti all’aperto.", "Fai 15 minuti di stretching o mobilità articolare oggi stesso.", "Prepara un pasto ricco di proteine e verdure per il pranzo o la cena."],
+            creativita: ["Blocca 25 minuti (Pomodoro) e scrivi 5 idee grezze senza filtro.", "Cambia ambiente: lavora 40 minuti in un posto diverso dal solito.", "Guarda o ascolta qualcosa di ispirante per 15 minuti e annota 3 insight."],
+            focus: ["Metti il telefono in un’altra stanza per la prossima sessione di lavoro.", "Definisci UNA sola priorità per le prossime 2 ore e proteggila.", "Usa la tecnica Root Hours: 90 minuti di lavoro profondo senza notifiche."],
+            riposo: ["Imposta un allarme per spegnere tutti gli schermi 60 minuti prima di dormire.", "Fai una passeggiata di 10 minuti senza cuffie questa sera.", "Prova la respirazione 4-7-8 per 4 cicli prima di andare a letto."],
+            finanze: ["Controlla le entrate e le spese degli ultimi 7 giorni in 10 minuti.", "Identifica una micro-spesa inutile da eliminare questa settimana.", "Scrivi 3 possibili fonti di reddito aggiuntive e scegline una da testare."],
+            relazioni: ["Manda un messaggio genuino a una persona a cui tieni oggi.", "Proponi una chiamata o un caffè (anche virtuale) entro 48 ore.", "Passa 20 minuti di qualità presenti con chi hai vicino, senza telefono."]
+        };
+
+        const quotes = {
+            salute: "Il corpo è l’unico strumento che hai per vivere. Trattalo come un tempio, non come un taxi.",
+            creativita: "La creatività non è un dono raro. È ciò che resta quando smetti di giudicare le tue idee.",
+            focus: "Chi protegge la propria attenzione protegge il proprio futuro.",
+            riposo: "Il riposo non è ozio. È il fondamento silenzioso di ogni grande opera.",
+            finanze: "La vera ricchezza è avere il tempo e l’energia per fare ciò che conta.",
+            relazioni: "Le relazioni sono l’unico investimento che compone interessi eterni."
+        };
+
+        let currentLang = localStorage.getItem('lifeBalanceLang') || 'it';
+        let scores = {};
+        let notes = {};
+        let chart = null;
+
+        // ========== LANGUAGE FUNCTIONS ==========
+        function toggleLangMenu() {
+            document.getElementById('langMenu').classList.toggle('show');
+        }
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('lifeBalanceLang', lang);
+            document.getElementById('currentLangLabel').textContent = lang.toUpperCase();
+            document.getElementById('langMenu').classList.remove('show');
+            document.documentElement.lang = lang;
+            
+            document.querySelectorAll('.lang-option').forEach(el => el.classList.remove('active'));
+            
+            applyTranslations();
+            renderAreaCards();
+            renderGuide();
+            renderHistory();
+            updateChartLabels();
+        }
+
+        function t(key) {
+            return translations[currentLang][key] || key;
+        }
+
+        function applyTranslations() {
+            document.getElementById('headerDesc').textContent = t('headerDesc');
+            document.getElementById('btnShare').textContent = t('btnShare');
+            document.getElementById('btnReset').textContent = t('btnReset');
+            document.getElementById('guideTitle').textContent = t('guideTitle');
+            document.getElementById('areasTitle').textContent = t('areasTitle');
+            document.getElementById('chartTitle').textContent = t('chartTitle');
+            document.getElementById('btnDownloadChart').textContent = t('btnDownloadChart');
+            document.getElementById('btnGenerate').textContent = t('btnGenerate');
+            document.getElementById('planTitle').textContent = t('planTitle');
+            document.getElementById('planSubtitle').textContent = t('planSubtitle');
+            document.getElementById('btnCopy').textContent = t('btnCopy');
+            document.getElementById('btnSaveImage').textContent = t('btnSaveImage');
+            document.getElementById('historyTitle').textContent = t('historyTitle');
+            document.getElementById('btnClearHistory').textContent = t('btnClearHistory');
+            document.getElementById('footerText').textContent = t('footerText');
+        }
+
+        function renderGuide() {
+            const container = document.getElementById('guideSteps');
+            const steps = t('guideSteps');
+            container.innerHTML = steps.map((step, i) => `
+                <div class="guide-step rounded-xl p-4 ${i === 5 ? 'border-amber-500/40' : ''}">
+                    <div class="font-semibold text-sm mb-1 ${i === 5 ? 'text-amber-300' : ''}">${step.title}</div>
+                    <p class="text-xs text-gray-400">${step.desc}</p>
+                </div>
+            `).join('');
+        }
+
+        // ========== APP INITIALIZATION ==========
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('currentLangLabel').textContent = currentLang.toUpperCase();
+            loadData();
+            applyTranslations();
+            renderGuide();
+            renderAreaCards();
+            initChart();
+            updateChart();
+            renderHistory();
+            
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.lang-selector')) {
+                    document.getElementById('langMenu').classList.remove('show');
+                }
+            });
+        });
+
+        function loadData() {
+            scores = JSON.parse(localStorage.getItem('lifeBalanceScores') || '{}');
+            notes = JSON.parse(localStorage.getItem('lifeBalanceNotes') || '{}');
+            const areas = t('areas');
+            areas.forEach(a => {
+                if (scores[a.id] === undefined) scores[a.id] = 5;
+                if (notes[a.id] === undefined) notes[a.id] = '';
+            });
+        }
+
+        function saveData() {
+            localStorage.setItem('lifeBalanceScores', JSON.stringify(scores));
+            localStorage.setItem('lifeBalanceNotes', JSON.stringify(notes));
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+                toast.classList.remove('opacity-100');
+            }, 2500);
+        }
+
+        function renderAreaCards() {
+            const container = document.getElementById('areasContainer');
+            const areas = t('areas');
+            container.innerHTML = '';
+            
+            areas.forEach(area => {
+                const value = scores[area.id];
+                const note = notes[area.id] || '';
+                const scoreClass = value <= 4 ? 'score-low' : value <= 7 ? 'score-mid' : 'score-high';
+
+                const card = document.createElement('div');
+                card.className = 'card-area rounded-2xl p-5';
+                card.innerHTML = `
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-600/40 to-pink-600/30 flex items-center justify-center">
+                                <i class="fas ${getIcon(area.id)} text-purple-300"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold">${area.name}</h3>
+                                <p class="text-xs text-gray-400">${area.desc}</p>
+                            </div>
+                        </div>
+                        <div id="badge-${area.id}" class="${scoreClass} text-white font-bold text-sm px-3 py-1 rounded-lg min-w-[42px] text-center">
+                            ${value}
+                        </div>
+                    </div>
+                    <input type="range" min="1" max="10" value="${value}" class="slider w-full mb-3"
+                           oninput="updateScore('${area.id}', this.value)">
+                    <textarea 
+                        class="w-full bg-black/30 border border-purple-500/20 rounded-xl px-3 py-2 text-sm text-gray-200 resize-none h-20"
+                        placeholder="${t('notePlaceholder')}"
+                        oninput="updateNote('${area.id}', this.value)">${note}</textarea>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function getIcon(id) {
+            const icons = {
+                salute: 'fa-dumbbell',
+                creativita: 'fa-lightbulb',
+                focus: 'fa-bullseye',
+                riposo: 'fa-moon',
+                finanze: 'fa-coins',
+                relazioni: 'fa-people-group'
+            };
+            return icons[id] || 'fa-circle';
+        }
+
+        function updateScore(id, value) {
+            scores[id] = parseInt(value);
+            const badge = document.getElementById(`badge-${id}`);
+            badge.textContent = value;
+            badge.className = `${value <= 4 ? 'score-low' : value <= 7 ? 'score-mid' : 'score-high'} text-white font-bold text-sm px-3 py-1 rounded-lg min-w-[42px] text-center`;
+            saveData();
+            updateChart();
+        }
+
+        function updateNote(id, value) {
+            notes[id] = value;
+            saveData();
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('balanceChart').getContext('2d');
+            const areas = t('areas');
+            chart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: areas.map(a => a.name.split(' & ')[0].split(' ')[0]),
+                    datasets: [{
+                        label: 'Bilancio',
+                        data: areas.map(a => scores[a.id]),
+                        backgroundColor: 'rgba(168, 85, 247, 0.25)',
+                        borderColor: '#a855f7',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#ec4899',
+                        pointBorderColor: '#fff',
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            min: 0,
+                            max: 10,
+                            ticks: { stepSize: 2, color: '#9ca3af', backdropColor: 'transparent' },
+                            grid: { color: 'rgba(168, 85, 247, 0.15)' },
+                            angleLines: { color: 'rgba(168, 85, 247, 0.15)' },
+                            pointLabels: { color: '#d1d5db', font: { size: 12 } }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function updateChart() {
+            if (!chart) return;
+            const areas = t('areas');
+            chart.data.datasets[0].data = areas.map(a => scores[a.id]);
+            chart.update();
+        }
+
+        function updateChartLabels() {
+            if (!chart) return;
+            const areas = t('areas');
+            chart.data.labels = areas.map(a => a.name.split(' & ')[0].split(' ')[0]);
+            chart.update();
+        }
+
+        function downloadChart() {
+            html2canvas(document.getElementById('chartContainer'), {
+                backgroundColor: '#1a1025',
+                scale: 2
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'balance-wheel.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
+        function generateActionPlan() {
+            const areas = t('areas');
+            const sorted = [...areas].sort((a, b) => scores[a.id] - scores[b.id]);
+            const lowest = sorted.slice(0, 3);
+
+            document.getElementById('criticalAreas').innerHTML = lowest.map(a => 
+                `<span class="px-3 py-1 rounded-full text-xs font-medium bg-red-500/20 text-red-300 border border-red-500/30">
+                    <i class="fas ${getIcon(a.id)} mr-1"></i>${a.name} (${scores[a.id]}/10)
+                </span>`
+            ).join('');
+
+            const stepsDiv = document.getElementById('actionSteps');
+            stepsDiv.innerHTML = '';
+            
+            lowest.forEach((area, index) => {
+                const action = actionLibrary[area.id][Math.floor(Math.random() * actionLibrary[area.id].length)];
+                const div = document.createElement('div');
+                div.className = 'flex items-start gap-3 p-4 rounded-xl bg-black/20 border border-purple-500/20';
+                div.innerHTML = `
+                    <input type="checkbox" class="mt-1 w-5 h-5 rounded accent-purple-500 cursor-pointer">
+                    <div>
+                        <p class="text-sm font-medium text-purple-300 mb-1">${index + 1}. ${area.name}</p>
+                        <p class="text-sm text-gray-200">${action}</p>
+                    </div>
+                `;
+                stepsDiv.appendChild(div);
+            });
+
+            document.getElementById('motivationalQuote').textContent = `"${quotes[lowest[0].id]}"`;
+            document.getElementById('actionPlanContainer').classList.remove('hidden');
+            document.getElementById('actionPlanContainer').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            saveToHistory();
+            showToast(currentLang === 'en' ? 'Balance saved to history!' : 'Bilancio salvato nello storico!');
+
+            confetti({
+                particleCount: 110,
+                spread: 70,
+                origin: { y: 0.65 },
+                colors: ['#a855f7', '#ec4899', '#fbbf24', '#22c55e']
+            });
+        }
+
+        function saveToHistory() {
+            let history = JSON.parse(localStorage.getItem('lifeBalanceHistory') || '[]');
+            const avg = (Object.values(scores).reduce((a, b) => a + b, 0) / 6).toFixed(1);
+            
+            history.unshift({
+                date: new Date().toLocaleString(currentLang === 'en' ? 'en-US' : 'it-IT'),
+                scores: {...scores},
+                notes: {...notes},
+                average: avg
+            });
+            
+            if (history.length > 25) history = history.slice(0, 25);
+            localStorage.setItem('lifeBalanceHistory', JSON.stringify(history));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('historyContainer');
+            const history = JSON.parse(localStorage.getItem('lifeBalanceHistory') || '[]');
+            const areas = t('areas');
+            
+            if (history.length === 0) {
+                container.innerHTML = `<p class="text-gray-500 text-sm">${t('noHistory')}</p>`;
+                return;
+            }
+
+            container.innerHTML = history.map(entry => {
+                const noteList = areas
+                    .filter(a => entry.notes[a.id] && entry.notes[a.id].trim() !== '')
+                    .map(a => `<div class="text-xs text-gray-400 mt-1"><span class="text-purple-300">${a.name.split(' & ')[0]}:</span> ${entry.notes[a.id]}</div>`)
+                    .join('');
+
+                return `
+                    <div class="card-area rounded-xl p-4">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <div class="font-medium text-sm">${entry.date}</div>
+                            <div class="text-sm">${t('average')}: <span class="text-purple-300 font-semibold">${entry.average}/10</span></div>
+                        </div>
+                        <div class="text-xs text-gray-500 mb-2">
+                            ${areas.map(a => `${a.name.split(' & ')[0]}: ${entry.scores[a.id]}`).join(' • ')}
+                        </div>
+                        ${noteList ? `<div class="border-t border-purple-500/20 pt-2 mt-2">${noteList}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function clearHistory() {
+            if (confirm(t('confirmClear'))) {
+                localStorage.removeItem('lifeBalanceHistory');
+                renderHistory();
+                showToast(currentLang === 'en' ? 'History cleared' : 'Storico cancellato');
+            }
+        }
+
+        function copyPlan() {
+            const steps = document.querySelectorAll('#actionSteps > div');
+            let text = currentLang === 'en' ? "🎯 MY ACTION PLAN — Life & Time Balance Tool\nDigital Creator Lab\n\n" : "🎯 IL MIO PIANO D'AZIONE — Life & Time Balance Tool\nDigital Creator Lab\n\n";
+            steps.forEach(step => {
+                const title = step.querySelector('.text-purple-300').textContent;
+                const action = step.querySelector('.text-gray-200').textContent;
+                text += `${title}\n→ ${action}\n\n`;
+            });
+            text += document.getElementById('motivationalQuote').textContent;
+            navigator.clipboard.writeText(text).then(() => showToast(currentLang === 'en' ? 'Plan copied to clipboard!' : 'Piano copiato negli appunti!'));
+        }
+
+        function exportPlanImage() {
+            html2canvas(document.getElementById('actionPlanCard'), {
+                backgroundColor: '#1e1b2e',
+                scale: 2
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'action-plan.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        }
+
+        function shareWhatsApp() {
+            const text = encodeURIComponent(
+                currentLang === 'en' ? 
+                `I used the Life & Time Balance Tool by Digital Creator Lab 🔥\n\nTry it for free: ${window.location.href}\n\nYouTube: https://www.youtube.com/@digitalcreatorlabIT` :
+                `Ho usato la Ruota del Bilancio Vitale di Digital Creator Lab 🔥\n\nProvala gratis: ${window.location.href}\n\nYouTube: https://www.youtube.com/@digitalcreatorlabIT`
+            );
+            window.open(`https://wa.me/?text=${text}`, '_blank');
+        }
+
+        function resetAll() {
+            if (confirm(t('confirmReset'))) {
+                const areas = t('areas');
+                areas.forEach(a => {
+                    scores[a.id] = 5;
+                    notes[a.id] = '';
+                });
+                saveData();
+                renderAreaCards();
+                updateChart();
+                document.getElementById('actionPlanContainer').classList.add('hidden');
+                showToast(currentLang === 'en' ? 'Ratings reset' : 'Valutazioni resettate');
+            }
+        }
+    </script>
+</body>
+</html>
